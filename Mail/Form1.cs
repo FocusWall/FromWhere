@@ -3,6 +3,7 @@ using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using System.IO;
 using System.Diagnostics;
+using System.Net;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -711,6 +712,71 @@ namespace Mail
         {
             string filename = "InfoCmon.chm";
             Process.Start(filename);
+        }
+
+        private static string WebRequest(string from)
+        {
+            const string WEBSERVICE_URL = "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address";
+            try
+            {
+                var webRequest = System.Net.WebRequest.Create(WEBSERVICE_URL);
+                if (webRequest != null)
+                {
+                    webRequest.Method = "POST";
+                    webRequest.Timeout = 20000;
+                    webRequest.ContentType = "application/json";
+                    webRequest.Headers.Add("Authorization", "Token de9cb0ec7c3251c64d06a7a823bc47fdba595a11");
+                    //String str = String.Format("{ \"query\": \"{0} \", \"count\": 1}", from);
+                    //String str = "\"{ \"query\": \"Новосибирск, Кирова \", \"count\": 1}\"";
+                    string test = from;
+                    string requestString = "{ \"query\": \"" + from + "\" , \"count\": 1}";
+
+                    string json = requestString;
+                    using (var streamWriter = new StreamWriter(webRequest.GetRequestStream()))
+                    {
+                        streamWriter.Write(json);
+                        streamWriter.Flush();
+                    }
+
+                    var httpResponse = (HttpWebResponse)webRequest.GetResponse();
+                    using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                    {
+                        var responseText = streamReader.ReadToEnd();
+                        var vr1 = 0;
+                        dynamic stuff = Newtonsoft.Json.JsonConvert.DeserializeObject(responseText);
+
+                        foreach (var item in stuff.suggestions)
+                        {
+                            Console.WriteLine(item.data.postal_code);
+                            vr1 = item.data.postal_code;
+                        }
+                        string fromItem = Convert.ToString(vr1);
+                        return fromItem;
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+
+                return null;
+            }
+        }
+
+        private void textBox2_Leave(object sender, EventArgs e)
+        {
+            string adress = textBox2.Text;
+            string indexFromAdress = WebRequest(adress);
+            textBox5.Text = indexFromAdress;
+        }
+
+        private void textBox4_Leave(object sender, EventArgs e)
+        {
+            string adress = textBox4.Text;
+            string indexFromAdress = WebRequest(adress);
+            textBox6.Text = indexFromAdress;
         }
     }
 }
